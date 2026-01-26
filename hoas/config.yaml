@@ -1,15 +1,19 @@
-{
-  "name": "HOAS Core",
-  "version": "0.1.0",
-  "slug": "hoas",
-  "description": "HOAS Addon Kinder Eltern System",
-  "startup": "application",
-  "boot": "auto",
-  "host_network": true,
-  "ports": {
-    "8080/tcp": 8080
-  },
-  "map": ["data"],
-  "options": {},
-  "schema": {}
-}
+name: HOAS Core
+version: 0.1.0
+slug: hoas
+description: HOAS – Kids/Parents Reward & Control System
+arch:
+  - amd64
+  - aarch64
+  - armv7
+  - armhf
+  - i386
+startup: application
+boot: auto
+host_network: true
+ports:
+  8080/tcp: 8080
+map:
+  - data
+options: {}
+schema: {}
