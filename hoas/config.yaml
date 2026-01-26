@@ -1,7 +1,7 @@
-name: HOAS Core
+name: HOAS Add-On Kinder Eltern System
 version: 0.1.0
 slug: hoas
-description: HOAS – Kids/Parents Reward & Control System
+description: KES-Core
 arch:
   - amd64
   - aarch64
