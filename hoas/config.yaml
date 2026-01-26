@@ -1,19 +1,22 @@
 name: HOAS Add-On Kinder Eltern System
-version: 0.1.0
+version: 0.1.1
 slug: hoas
 description: KES-Core
+
 arch:
   - amd64
   - aarch64
   - armv7
   - armhf
   - i386
+
 build_from:
   amd64: ghcr.io/home-assistant/amd64-base:latest
   aarch64: ghcr.io/home-assistant/aarch64-base:latest
   armv7: ghcr.io/home-assistant/armv7-base:latest
   armhf: ghcr.io/home-assistant/armhf-base:latest
   i386: ghcr.io/home-assistant/i386-base:latest
+
 startup: application
 boot: auto
 host_network: true
@@ -21,5 +24,6 @@ ports:
   8080/tcp: 8080
 map:
   - data
+
 options: {}
 schema: {}
