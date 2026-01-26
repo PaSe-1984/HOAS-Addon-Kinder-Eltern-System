@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
 
 COPY app /app/app
 COPY run.sh /app/run.sh
+RUN sed -i 's/\r$//' /app/run.sh && chmod +x /app/run.sh
 
 RUN chmod +x /app/run.sh
 
