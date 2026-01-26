@@ -1,0 +1,16 @@
+{
+  "name": "HOAS Core",
+  "version": "0.1.0",
+  "slug": "hoas",
+  "description": "Home Assistant Oriented Add-on System (Kids / Parents)",
+  "startup": "application",
+  "boot": "auto",
+  "ingress": false,
+  "host_network": true,
+  "ports": {
+    "8080/tcp": 8080
+  },
+  "options": {},
+  "schema": {},
+  "map": ["data"]
+}
