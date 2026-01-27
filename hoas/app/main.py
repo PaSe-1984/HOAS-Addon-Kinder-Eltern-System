@@ -5,7 +5,7 @@ import json
 
 from .db import init_db, get_db
 from .auth import generate_token
-from .ws import register, unregister, send_command
+from .ws import register, unregister, send_command, list_clients
 
 app = FastAPI()
 
@@ -77,8 +77,30 @@ async def command(device_id: str, name: str, params: dict = {}):
         "name": name,
         "params": params
     })
+    
+        ok = await send_command(device_id, {
+        "type": "cmd",
+        "cmd_id": cmd_id,
+        "name": name,
+        "params": params
+    })
+
+    if not ok:
+        db.execute(
+            "UPDATE commands SET status=? WHERE cmd_id=?",
+            ("no_client", cmd_id)
+        )
+        db.commit()
+        return {"status": "no_client", "cmd_id": cmd_id}
 
     return {"status": "sent", "cmd_id": cmd_id}
+
+
+    return {"status": "sent", "cmd_id": cmd_id}
+
+@app.get("/api/ws_clients")
+def ws_clients():
+    return {"clients": list_clients()}
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket, token: str):
