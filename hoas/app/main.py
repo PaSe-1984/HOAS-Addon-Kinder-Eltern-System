@@ -111,6 +111,46 @@ async def command(
 
     return {"status": "sent", "cmd_id": cmd_id}
 
+@app.post("/api/kid/points")
+def kid_points(child_name: str, delta: int, reason: str = ""):
+    # Regel: 1 Punkt = 60 Sekunden (kannst du später konfigurieren)
+    delta_seconds = delta * 60
+
+    db = get_db()
+    db.execute("INSERT OR IGNORE INTO kids VALUES (?,?,?)", (child_name, 0, 0))
+    db.execute("UPDATE kids SET points = points + ?, time_seconds = time_seconds + ? WHERE child_name=?",
+               (delta, delta_seconds, child_name))
+
+    tx_id = str(uuid.uuid4())
+    db.execute(
+        "INSERT INTO transactions VALUES (?,?,?,?,?,?)",
+        (tx_id, child_name, delta, delta_seconds, reason, datetime.utcnow().isoformat())
+    )
+    db.commit()
+
+    kid = db.execute("SELECT * FROM kids WHERE child_name=?", (child_name,)).fetchone()
+    return dict(kid)
+
+@app.post("/api/kid/start_time")
+async def kid_start_time(device_id: str, child_name: str, reason: str = "Zeit läuft"):
+    db = get_db()
+    row = db.execute("SELECT time_seconds FROM kids WHERE child_name=?", (child_name,)).fetchone()
+    if not row:
+        return {"error": "kid_not_found"}
+
+    seconds = int(row["time_seconds"])
+    if seconds <= 0:
+        return {"error": "no_time"}
+
+    # Zeit “verbrauchen” (MVP: direkt auf 0 setzen)
+    db.execute("UPDATE kids SET time_seconds=0 WHERE child_name=?", (child_name,))
+    db.commit()
+
+    # Command an App
+    # nutzt deinen /api/cmd Endpoint:
+    # name=START_TIMER params={"seconds":seconds,"reason":reason}
+    # -> du kannst hier direkt command() aufrufen, aber sauberer: HTTP intern oder Funktion auslagern
+    return {"device_id": device_id, "seconds": seconds, "reason": reason}
 
 # ✅ WebSocket: App verbindet sich so:
 # ws://IP:8080/ws?token=TOKEN
@@ -136,10 +176,12 @@ async def websocket_endpoint(ws: WebSocket, token: str):
             msg = await ws.receive_json()
 
             if msg.get("type") == "heartbeat":
+                state = msg.get("state") or {}
                 db.execute(
-                    "UPDATE devices SET last_seen=? WHERE device_id=?",
-                    (datetime.utcnow().isoformat(), device_id)
+                    "UPDATE devices SET last_seen=?, state_json=? WHERE device_id=?",
+                    (datetime.utcnow().isoformat(), json.dumps(state), device_id)
                 )
+
                 db.commit()
 
             elif msg.get("type") in ("ack", "result"):
@@ -157,3 +199,4 @@ async def websocket_endpoint(ws: WebSocket, token: str):
             await ws.close()
         except Exception:
             pass
+

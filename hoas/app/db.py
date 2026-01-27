@@ -33,5 +33,24 @@ def init_db():
         created_at TEXT
     )
     """)
+    
+    db.execute("""
+    CREATE TABLE IF NOT EXISTS kids (
+      child_name TEXT PRIMARY KEY,
+      points INTEGER NOT NULL,
+      time_seconds INTEGER NOT NULL
+    )
+    """)
+
+    db.execute("""
+    CREATE TABLE IF NOT EXISTS transactions (
+      id TEXT PRIMARY KEY,
+      child_name TEXT NOT NULL,
+      delta_points INTEGER NOT NULL,
+      delta_seconds INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+    """)
 
     db.commit()
