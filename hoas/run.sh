@@ -3,4 +3,5 @@ set -e
 export PATH="/opt/venv/bin:$PATH"
 python --version
 uvicorn --version
-exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --log-level info
+exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1
+
