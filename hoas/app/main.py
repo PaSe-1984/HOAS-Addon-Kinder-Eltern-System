@@ -9,6 +9,14 @@ from .ws import register, unregister, send_command
 
 app = FastAPI()
 
+@app.get("/")
+def root():
+    return {"ok": True, "service": "HOAS"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.on_event("startup")
 def startup():
     init_db()
