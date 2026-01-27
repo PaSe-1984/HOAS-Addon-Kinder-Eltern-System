@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body
 from datetime import datetime
 import uuid
 import json
@@ -9,18 +9,24 @@ from .ws import register, unregister, send_command, list_clients
 
 app = FastAPI()
 
+
+# ✅ Root + Health (damit du immer testen kannst)
 @app.get("/")
 def root():
     return {"ok": True, "service": "HOAS"}
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
+
 @app.on_event("startup")
 def startup():
     init_db()
 
+
+# ✅ Pairing: erstellt device_id + token
 @app.post("/api/pair")
 def pair(child_name: str):
     device_id = str(uuid.uuid4())
@@ -39,17 +45,28 @@ def pair(child_name: str):
         "ws_url": "/ws"
     }
 
+
+# ✅ Devices anzeigen
 @app.get("/api/devices")
 def devices():
     db = get_db()
     rows = db.execute("SELECT * FROM devices").fetchall()
     return [dict(r) for r in rows]
 
+
+# ✅ Debug: Welche Geräte sind wirklich per WebSocket verbunden?
+@app.get("/api/ws_clients")
+def ws_clients():
+    return {"clients": list_clients()}
+
+
+# ✅ Commands anzeigen (Debug/Monitoring)
 @app.get("/api/commands")
 def commands():
     db = get_db()
     rows = db.execute("SELECT * FROM commands ORDER BY created_at DESC LIMIT 50").fetchall()
     return [dict(r) for r in rows]
+
 
 @app.get("/api/commands/{device_id}")
 def commands_for_device(device_id: str):
@@ -60,8 +77,14 @@ def commands_for_device(device_id: str):
     ).fetchall()
     return [dict(r) for r in rows]
 
+
+# ✅ Command an Gerät senden
 @app.post("/api/cmd/{device_id}")
-async def command(device_id: str, name: str, params: dict = {}):
+async def command(
+    device_id: str,
+    name: str,
+    params: dict = Body(default={})
+):
     cmd_id = str(uuid.uuid4())
 
     db = get_db()
@@ -71,14 +94,7 @@ async def command(device_id: str, name: str, params: dict = {}):
     )
     db.commit()
 
-    await send_command(device_id, {
-        "type": "cmd",
-        "cmd_id": cmd_id,
-        "name": name,
-        "params": params
-    })
-    
-        ok = await send_command(device_id, {
+    ok = await send_command(device_id, {
         "type": "cmd",
         "cmd_id": cmd_id,
         "name": name,
@@ -95,10 +111,9 @@ async def command(device_id: str, name: str, params: dict = {}):
 
     return {"status": "sent", "cmd_id": cmd_id}
 
-@app.get("/api/ws_clients")
-def ws_clients():
-    return {"clients": list_clients()}
 
+# ✅ WebSocket: App verbindet sich so:
+# ws://IP:8080/ws?token=TOKEN
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket, token: str):
     await ws.accept()
@@ -120,19 +135,25 @@ async def websocket_endpoint(ws: WebSocket, token: str):
         while True:
             msg = await ws.receive_json()
 
-            if msg["type"] == "heartbeat":
+            if msg.get("type") == "heartbeat":
                 db.execute(
                     "UPDATE devices SET last_seen=? WHERE device_id=?",
                     (datetime.utcnow().isoformat(), device_id)
                 )
                 db.commit()
 
-            elif msg["type"] in ("ack", "result"):
+            elif msg.get("type") in ("ack", "result"):
                 db.execute(
                     "UPDATE commands SET status=? WHERE cmd_id=?",
-                    (msg["status"], msg["cmd_id"])
+                    (msg.get("status"), msg.get("cmd_id"))
                 )
                 db.commit()
 
     except WebSocketDisconnect:
         unregister(device_id)
+    except Exception:
+        unregister(device_id)
+        try:
+            await ws.close()
+        except Exception:
+            pass
