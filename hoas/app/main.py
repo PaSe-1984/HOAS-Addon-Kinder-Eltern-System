@@ -95,9 +95,6 @@ async def command(device_id: str, name: str, params: dict = {}):
 
     return {"status": "sent", "cmd_id": cmd_id}
 
-
-    return {"status": "sent", "cmd_id": cmd_id}
-
 @app.get("/api/ws_clients")
 def ws_clients():
     return {"clients": list_clients()}
