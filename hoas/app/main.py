@@ -45,6 +45,21 @@ def devices():
     rows = db.execute("SELECT * FROM devices").fetchall()
     return [dict(r) for r in rows]
 
+@app.get("/api/commands")
+def commands():
+    db = get_db()
+    rows = db.execute("SELECT * FROM commands ORDER BY created_at DESC LIMIT 50").fetchall()
+    return [dict(r) for r in rows]
+
+@app.get("/api/commands/{device_id}")
+def commands_for_device(device_id: str):
+    db = get_db()
+    rows = db.execute(
+        "SELECT * FROM commands WHERE device_id=? ORDER BY created_at DESC LIMIT 50",
+        (device_id,)
+    ).fetchall()
+    return [dict(r) for r in rows]
+
 @app.post("/api/cmd/{device_id}")
 async def command(device_id: str, name: str, params: dict = {}):
     cmd_id = str(uuid.uuid4())
