@@ -77,7 +77,7 @@ async def websocket_endpoint(ws: WebSocket, token: str):
 
     device_id = device["device_id"]
 
-    # ✅ REGISTRIEREN
+    # ✅ registrieren (speichert *diese* WS Instanz)
     await register(device_id, ws)
 
     try:
@@ -99,13 +99,10 @@ async def websocket_endpoint(ws: WebSocket, token: str):
                 db.commit()
 
     except WebSocketDisconnect:
-        # Verbindung normal getrennt
         pass
-
     except Exception as e:
-        # Irgendein Fehler → trotzdem sauber abmelden
         print("WS error:", e)
-
     finally:
-        # ✅ WICHTIG: IMMER unregister!
-        await unregister(device_id)
+        # ✅ WICHTIG: unregister NUR wenn WS Instanz noch aktuell ist
+        await unregister(device_id, ws)
+
