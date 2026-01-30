@@ -28,18 +28,36 @@ def root():
 def health():
     return {"status": "ok"}
 
-# ----------------------------
-# Pairing
-# ----------------------------
+def ensure_devices_schema(db):
+    # Prüfe vorhandene Spalten
+    cols = [r[1] for r in db.execute("PRAGMA table_info(devices)").fetchall()]
+
+    # Alte DB? Dann Spalten nachziehen
+    if "child_name" not in cols:
+        db.execute("ALTER TABLE devices ADD COLUMN child_name TEXT NOT NULL DEFAULT ''")
+    if "token" not in cols:
+        db.execute("ALTER TABLE devices ADD COLUMN token TEXT NOT NULL DEFAULT ''")
+    if "created_at" not in cols:
+        db.execute("ALTER TABLE devices ADD COLUMN created_at TEXT NOT NULL DEFAULT ''")
+    if "last_seen" not in cols:
+        db.execute("ALTER TABLE devices ADD COLUMN last_seen TEXT")
+    if "meta_json" not in cols:
+        db.execute("ALTER TABLE devices ADD COLUMN meta_json TEXT NOT NULL DEFAULT '{}'")
+
+    db.commit()
+
 @app.post("/api/pair")
 def pair(child_name: str):
     try:
+        db = get_db()
+
+        # ✅ Schema JETZT sicherstellen, egal ob Startup/Migration lief
+        ensure_devices_schema(db)
+
         device_id = str(uuid.uuid4())
         token = generate_token()
 
-        db = get_db()
-
-        # ✅ IMMER mit Spaltenliste (nie VALUES ohne Spalten!)
+        # ✅ Spaltenliste immer explizit
         db.execute(
             "INSERT INTO devices(device_id, child_name, token, created_at, last_seen, meta_json) VALUES (?,?,?,?,?,?)",
             (device_id, child_name, token, now_iso(), None, "{}")
@@ -49,7 +67,6 @@ def pair(child_name: str):
         return {"device_id": device_id, "token": token, "ws_url": "/ws"}
 
     except Exception as e:
-        # Damit du im Log klar siehst, was es ist
         print("PAIR ERROR:", repr(e))
         raise HTTPException(status_code=500, detail="pair failed (see addon logs)")
 
