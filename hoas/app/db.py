@@ -12,6 +12,15 @@ def get_db() -> sqlite3.Connection:
         _conn.row_factory = sqlite3.Row
     return _conn
 
+def _has_column(db: sqlite3.Connection, table: str, col: str) -> bool:
+    rows = db.execute(f"PRAGMA table_info({table})").fetchall()
+    return any(r["name"] == col for r in rows)
+
+def _add_column_if_missing(db: sqlite3.Connection, table: str, ddl: str):
+    col = ddl.split()[0]
+    if not _has_column(db, table, col):
+        db.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+
 def init_db():
     db = get_db()
 
@@ -40,5 +49,14 @@ def init_db():
         FOREIGN KEY(device_id) REFERENCES devices(device_id)
     )
     """)
+
+    # ✅ Migration (alte DBs)
+    _add_column_if_missing(db, "devices", "last_seen TEXT")
+    _add_column_if_missing(db, "devices", "meta_json TEXT NOT NULL DEFAULT '{}'")
+
+    _add_column_if_missing(db, "commands", "params_json TEXT NOT NULL DEFAULT '{}'")
+    _add_column_if_missing(db, "commands", "updated_at TEXT NOT NULL DEFAULT ''")
+    _add_column_if_missing(db, "commands", "result_json TEXT")
+    _add_column_if_missing(db, "commands", "error_text TEXT")
 
     db.commit()

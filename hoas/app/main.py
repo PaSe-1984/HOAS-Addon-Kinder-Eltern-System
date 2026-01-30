@@ -33,21 +33,25 @@ def health():
 # ----------------------------
 @app.post("/api/pair")
 def pair(child_name: str):
-    device_id = str(uuid.uuid4())
-    token = generate_token()
+    try:
+        device_id = str(uuid.uuid4())
+        token = generate_token()
 
-    db = get_db()
-    db.execute(
-        "INSERT INTO devices(device_id, child_name, token, created_at, last_seen, meta_json) VALUES (?,?,?,?,?,?)",
-        (device_id, child_name, token, now_iso(), None, "{}")
-    )
-    db.commit()
+        db = get_db()
 
-    return {
-        "device_id": device_id,
-        "token": token,
-        "ws_url": "/ws"
-    }
+        # ✅ IMMER mit Spaltenliste (nie VALUES ohne Spalten!)
+        db.execute(
+            "INSERT INTO devices(device_id, child_name, token, created_at, last_seen, meta_json) VALUES (?,?,?,?,?,?)",
+            (device_id, child_name, token, now_iso(), None, "{}")
+        )
+        db.commit()
+
+        return {"device_id": device_id, "token": token, "ws_url": "/ws"}
+
+    except Exception as e:
+        # Damit du im Log klar siehst, was es ist
+        print("PAIR ERROR:", repr(e))
+        raise HTTPException(status_code=500, detail="pair failed (see addon logs)")
 
 @app.get("/api/devices")
 def devices():
